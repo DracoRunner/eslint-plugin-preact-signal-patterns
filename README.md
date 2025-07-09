@@ -1,22 +1,42 @@
-# eslint-plugin-preact-signals
+# eslint-plugin-preact-signal-patterns
 
-ESLint rules for Preact Signals best practices, promoting reactive component patterns and proper signal usage.
+ESLint rules for Preact Signals architectural patterns, promoting reactive component patterns and proper signal-passing conventions.
 
 ## 🎯 Philosophy
 
-This plugin promotes a signal-passing convention where:
+This plugin promotes a **signal-passing architectural pattern** where:
 
 - **Signals are passed directly to component props**: `<Typography text={mySignal} />`
 - **Components handle signal reactivity automatically**
 - **`.value` usage is minimized and only used when necessary**
 - **`.peek()` is used for non-reactive reads in callbacks**
 
+
+**Rule Comparison:**
+- **`no-signal-value-outside-hooks`** - ✅ **Unique to this plugin** - Enforces `.peek()` usage in callbacks
+- **`no-signal-value-in-jsx`** - ✅ **Unique to this plugin** - Promotes signal-passing patterns  
+- **`no-implicit-boolean-signal`** - ✅ **Both plugins** - This one uses enhanced heuristics, theirs uses TypeScript types
+
+**When to Use Which:**
+- **Use this plugin** for architectural guidance, pattern enforcement, and auto-fixing
+- **Use bensaufley's plugin** for strict TypeScript-based type safety
+- **Use both together** for comprehensive signal usage validation
+
+### **Enhanced `no-implicit-boolean-signal` Rule**
+
+Our implementation includes improvements inspired by bensaufley's plugin:
+
+- **Enhanced detection patterns**: More signal naming conventions
+- **Import-based detection**: Checks for `@preact/signals*` imports
+- **Flexible nullish coalescing**: Options like `'always'`, `'nullish'`, `false`
+- **Better error messages**: Clear guidance on fixing issues
+
 ## 📦 Installation
 
 ```bash
-npm install --save-dev eslint-plugin-preact-signals
+npm install --save-dev eslint-plugin-preact-signal-patterns
 # or
-yarn add -D eslint-plugin-preact-signals
+yarn add -D eslint-plugin-preact-signal-patterns
 ```
 
 ## 🚀 Usage
@@ -27,8 +47,8 @@ Add to your `.eslintrc.js`:
 
 ```javascript
 module.exports = {
-  plugins: ["preact-signals"],
-  extends: ["plugin:preact-signals/recommended"],
+  plugins: ["preact-signal-patterns"],
+  extends: ["plugin:preact-signal-patterns/recommended"],
 };
 ```
 
@@ -36,30 +56,33 @@ module.exports = {
 
 ```javascript
 module.exports = {
-  plugins: ["preact-signals"],
+  plugins: ["preact-signal-patterns"],
   rules: {
-    "preact-signals/no-signal-value-outside-hooks": "error", // Error + auto-fix
-    "preact-signals/no-signal-value-in-jsx": "warn", // Warning only
+    "preact-signal-patterns/no-signal-value-outside-hooks": "error", // Error + auto-fix
+    "preact-signal-patterns/no-signal-value-in-jsx": "warn", // Warning only
+    "preact-signal-patterns/no-implicit-boolean-signal": "error", // Prevent bugs
   },
 };
 ```
 
 ## 📋 Available Configurations
 
-- **`recommended`**: Error for non-JSX, warn for JSX
-- **`strict`**: Error for both non-JSX and JSX usage
+- **`recommended`**: All rules enabled (error for patterns, warn for JSX)
+- **`strict`**: All rules as errors  
 - **`jsx-warnings-only`**: Only warn about JSX usage
+- **`type-safety`**: Only the boolean coercion rule (focuses on bug prevention)
 
 ```javascript
 // Different config options
-extends: ['plugin:preact-signals/recommended']  // Default
-extends: ['plugin:preact-signals/strict']       // Strict mode
-extends: ['plugin:preact-signals/jsx-warnings-only']  // JSX warnings only
+extends: ['plugin:preact-signal-patterns/recommended']  // Default: all rules
+extends: ['plugin:preact-signal-patterns/strict']       // Strict mode: all errors
+extends: ['plugin:preact-signal-patterns/jsx-warnings-only']  // JSX warnings only
+extends: ['plugin:preact-signal-patterns/type-safety']  // Bug prevention only
 ```
 
 ## 📏 Rules
 
-### `preact-signals/no-signal-value-outside-hooks` (🔧 Fixable)
+### `preact-signal-patterns/no-signal-value-outside-hooks` (🔧 Fixable)
 
 **Purpose**: Prevents reading `signal.value` outside of `useComputed`, `useSignalEffect`, or JSX contexts.
 
@@ -120,7 +143,7 @@ const computed = useComputed(() => mySignal.value); // ✓ Allowed in hooks
 
 ---
 
-### `preact-signals/no-signal-value-in-jsx`
+### `preact-signal-patterns/no-signal-value-in-jsx`
 
 **Purpose**: Warns when `signal.value` is used in JSX contexts, encouraging passing signals directly to components.
 
@@ -160,6 +183,101 @@ const signalClass = useComputed(() => {
   });
 });
 <AppButton className={signalClass} />;
+```
+
+---
+
+### `preact-signal-patterns/no-implicit-boolean-signal`
+
+**Purpose**: Prevents bugs from implicit boolean coercion of signal objects.
+
+**Severity**: Error  
+**Auto-fix**: No
+
+#### What it does:
+
+- Detects when signal variables are used in boolean contexts without `.value` or `.peek()`
+- Prevents common bugs where signal object truthiness is checked instead of signal value
+- **Enhanced detection**: Uses both naming heuristics AND import analysis
+- **Flexible options**: Configure nullish coalescing behavior
+
+#### Configuration Options:
+
+```javascript
+{
+  "preact-signal-patterns/no-implicit-boolean-signal": ["error", {
+    "allowNullishCoalesce": "nullish" // 'always' | 'nullish' | false
+  }]
+}
+```
+
+- **`'always'`**: Allow all nullish coalescing (`signal ?? default`)
+- **`'nullish'`** (default): Allow nullish coalescing for potentially null signals  
+- **`false`**: Disallow all nullish coalescing
+
+#### Detection Methods:
+
+1. **Naming Patterns**: `mySignal`, `count$`, `userStore`, `appState`, `dataSource`
+2. **Import Analysis**: Variables from `@preact/signals*` packages
+3. **Assignment Analysis**: Variables assigned from `signal()` calls
+
+#### Examples:
+
+❌ **Bug-prone (will error):**
+
+```tsx
+import { signal } from '@preact/signals';
+
+const mySignal = signal("hello");
+const userStore = signal(null);
+const count$ = signal(0);
+
+// Bug: Always true (checking signal object existence)
+if (mySignal) {
+  console.log("Signal exists"); // This always runs!
+}
+
+// Bug: Always true  
+const isActive = !!userStore && someCondition;
+
+// Bug: Always truthy
+while (count$) { // Infinite loop!
+  break;
+}
+
+// Nullish coalescing (configurable)
+const value = mySignal ?? "default"; // Error if allowNullishCoalesce: false
+```
+
+✅ **Correct:**
+
+```tsx
+import { signal } from '@preact/signals';
+
+const mySignal = signal("hello");
+const userStore = signal(null);
+const count$ = signal(0);
+
+// Correct: Check signal value
+if (mySignal.value) {
+  console.log("Signal has truthy value");
+}
+
+// Correct: Use .peek() for non-reactive reads
+const isActive = !!userStore.peek() && someCondition;
+
+// Correct: Check value in loop
+while (count$.value > 0) {
+  count$.value--;
+}
+
+// Correct: Explicit null check
+if (userStore.value === null) {
+  console.log("User not set");
+}
+
+// Correct: Proper nullish coalescing  
+const value = mySignal.value ?? "default";
 ```
 
 ## 🛠️ Usage
