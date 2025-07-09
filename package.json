@@ -1,0 +1,49 @@
+{
+  "name": "eslint-plugin-preact-signals",
+  "version": "1.0.0",
+  "description": "ESLint rules for Preact Signals best practices - promotes signal passing convention and reactive components",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/run-all-tests.js",
+    "test:basic": "node test/test.js",
+    "test:real-world": "node test/test-real-world.js",
+    "test:validation": "node test/test-validation.js",
+    "test:direct": "node test/test-rules.js",
+    "test:summary": "node test/validation-summary.js",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "preact",
+    "signals",
+    "reactivity",
+    "preact-signals",
+    "linting"
+  ],
+  "author": "Mahendra Baghel",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mahendrabaghel/eslint-plugin-preact-signals"
+  },
+  "homepage": "https://github.com/mahendrabaghel/eslint-plugin-preact-signals#readme",
+  "bugs": {
+    "url": "https://github.com/mahendrabaghel/eslint-plugin-preact-signals/issues"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.js",
+    "rules/",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}
