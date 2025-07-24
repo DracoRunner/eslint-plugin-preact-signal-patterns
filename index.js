@@ -37,5 +37,13 @@ module.exports = {
         "preact-signal-patterns/no-implicit-boolean-signal": "error",
       },
     },
+    "warnings": {
+      plugins: ["preact-signal-patterns"],
+      rules: {
+        "preact-signal-patterns/no-signal-value-outside-hooks": ["warn", { "autoFix": false }],
+        "preact-signal-patterns/no-signal-value-in-jsx": "warn",
+        "preact-signal-patterns/no-implicit-boolean-signal": "warn",
+      },
+    },
   },
 };

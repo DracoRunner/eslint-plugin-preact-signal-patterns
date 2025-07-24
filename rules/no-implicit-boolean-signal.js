@@ -1,3 +1,5 @@
+const { createSignalDetector } = require('../utils/signal-detector');
+
 module.exports = {
   meta: {
     type: 'problem',
@@ -38,64 +40,8 @@ module.exports = {
     const options = context.options[0] || {};
     const allowNullishCoalesce = options.allowNullishCoalesce;
 
-    // Track actual signal variables by their definitions
-    const signalVariables = new Set();
-
-    function trackSignalVariable(name) {
-      if (name) {
-        signalVariables.add(name);
-      }
-    }
-
-    function isSignalVariable(node) {
-      // First check if we've tracked this as a signal variable
-      if (signalVariables.has(node.name)) {
-        return true;
-      }
-
-      // Try to detect if variable comes from a Preact signal import or assignment
-      const scope = context.getScope();
-      let currentScope = scope;
-
-      while (currentScope) {
-        const variable = currentScope.set.get(node.name);
-        if (variable && variable.defs.length > 0) {
-          const def = variable.defs[0];
-
-          // Check if it's imported from @preact/signals*
-          if (def.type === 'ImportBinding' && def.node.source) {
-            const importPath = def.node.source.value;
-            if (typeof importPath === 'string' && importPath.includes('@preact/signals')) {
-              trackSignalVariable(node.name);
-              return true;
-            }
-          }
-
-          // Check if it's assigned from a signal-creating function
-          if (def.node && def.node.init) {
-            const init = def.node.init;
-            if (init.type === 'CallExpression' && init.callee) {
-              const calleeName = init.callee.name;
-              // Check for signal creation functions
-              if (['signal', 'useSignal', 'useComputed', 'computed'].includes(calleeName)) {
-                trackSignalVariable(node.name);
-                return true;
-              }
-            }
-          }
-          break;
-        }
-        currentScope = currentScope.upper;
-      }
-
-      // Fallback: only check for very obvious signal naming conventions
-      const hasSignalSuffix = /\$$/.test(node.name); // count$, user$
-      if (hasSignalSuffix) {
-        return true;
-      }
-
-      return false;
-    }
+    // Create signal detector with shared logic
+    const signalDetector = createSignalDetector(context);
 
     function isInBooleanContext(node) {
       const parent = node.parent;
@@ -132,17 +78,8 @@ module.exports = {
     }
 
     return {
-      // Track signal variable declarations
-      VariableDeclarator(node) {
-        if (node.init && node.init.type === 'CallExpression' && node.init.callee) {
-          const calleeName = node.init.callee.name;
-          if (['signal', 'useSignal', 'useComputed', 'computed'].includes(calleeName)) {
-            if (node.id && node.id.type === 'Identifier') {
-              trackSignalVariable(node.id.name);
-            }
-          }
-        }
-      },
+      // Use shared signal declaration visitor
+      ...signalDetector.getSignalDeclarationVisitor(),
 
       Identifier(node) {
         // Skip if it's a property access (signal.value, signal.peek)
@@ -188,7 +125,7 @@ module.exports = {
         }
 
         // Only check variables we've confirmed are signals
-        if (!isSignalVariable(node)) {
+        if (!signalDetector.isSignalVariable(node)) {
           return;
         }
 

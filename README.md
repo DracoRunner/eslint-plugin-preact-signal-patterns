@@ -71,6 +71,7 @@ module.exports = {
 - **`strict`**: All rules as errors  
 - **`jsx-warnings-only`**: Only warn about JSX usage
 - **`type-safety`**: Only the boolean coercion rule (focuses on bug prevention)
+- **`warn-no-autofix`**: All rules as warnings with auto-fix disabled
 
 ```javascript
 // Different config options
@@ -78,6 +79,7 @@ extends: ['plugin:preact-signal-patterns/recommended']  // Default: all rules
 extends: ['plugin:preact-signal-patterns/strict']       // Strict mode: all errors
 extends: ['plugin:preact-signal-patterns/jsx-warnings-only']  // JSX warnings only
 extends: ['plugin:preact-signal-patterns/type-safety']  // Bug prevention only
+extends: ['plugin:preact-signal-patterns/warnings']     // All warnings, no auto-fix by default
 ```
 
 ## 📏 Rules
@@ -89,48 +91,76 @@ extends: ['plugin:preact-signal-patterns/type-safety']  // Bug prevention only
 **Severity**: Error  
 **Auto-fix**: Yes (converts `.value` to `.peek()`)
 
+#### Configuration Options:
+
+```javascript
+{
+  "preact-signal-patterns/no-signal-value-outside-hooks": ["error", {
+    "autoFix": true // Default: true, set to false to disable auto-fix
+  }]
+}
+```
+
+#### Signal Detection:
+
+This rule uses enhanced signal detection that checks:
+1. **Import analysis**: Variables from `@preact/signals*` packages
+2. **Assignment analysis**: Variables assigned from `signal()`, `useSignal()`, etc.
+3. **Naming patterns**: Variables ending with `$` (like `count$`) or following exact pattern `[word]Signal` (like `userSignal`)
+
+**Improved Detection (v1.1.0)**: The naming pattern detection has been made more conservative to reduce false positives.
+
 #### What it does:
 
 - Detects when `signal.value` is read in regular JavaScript code (outside JSX)
-- Automatically fixes violations by replacing `.value` with `.peek()`
+- Automatically fixes violations by replacing `.value` with `.peek()` (when `autoFix: true`)
 - Allows `signal.value` in JSX contexts and inside `useComputed`/`useSignalEffect`
 - Always allows assignments to `signal.value`
+- **Only flags actual signals**, not arbitrary objects with `.value` properties
 
 #### Examples:
 
 ❌ **Bad (will error and auto-fix):**
 
 ```tsx
+import { signal } from '@preact/signals';
+
+const mySignal = signal(0);
+const count$ = signal(10);
+
 const onSelect = (): void => {
-  if (mySignal.value) {
-    // Error: auto-fixed to mySignal.peek()
-    doSomething(mySignal.value); // Error: auto-fixed to mySignal.peek()
+  if (mySignal.value) { // Error: auto-fixed to mySignal.peek()
+    doSomething(count$.value); // Error: auto-fixed to count$.peek()
   }
 };
+
+// This will NOT be flagged (not a signal):
+const regularObject = { value: "hello" };
+if (regularObject.value) { // ✓ Correctly ignored
+  console.log("This is fine");
+}
 ```
 
 ✅ **Good:**
 
 ```tsx
+import { signal } from '@preact/signals';
+
+const mySignal = signal(0);
+const count$ = signal(10);
+
 const onSelect = (): void => {
-  if (mySignal.peek()) {
-    // ✓ Correct usage (auto-fixed)
-    doSomething(mySignal.peek()); // ✓ Correct usage (auto-fixed)
+  if (mySignal.peek()) { // ✓ Correct usage (auto-fixed)
+    doSomething(count$.peek()); // ✓ Correct usage (auto-fixed)
   }
 };
-```
 
-```tsx
-const onSelect = (): void => {
-  const newValue = mySignal.peek(); // ✓ Correct usage
-  if (newValue) {
-    // ✓ Correct usage
-    doSomething(newValue); // ✓ Correct usage
-  }
-};
-```
+// Regular objects are fine
+const regularObject = { value: "hello" };
+if (regularObject.value) { // ✓ Not flagged
+  console.log("This is fine");
+}
 
-```tsx
 // Assignments are always allowed
 mySignal.value = newValue; // ✓ Always allowed
 
@@ -141,6 +171,24 @@ const computed = useComputed(() => mySignal.value); // ✓ Allowed in hooks
 <div className={mySignal.value ? "active" : ""} />; // ✓ Allowed in JSX
 ```
 
+#### Disable Auto-fix for Warnings:
+
+**Important**: By default, when a rule is set to `"warn"`, it may still auto-fix when using `eslint --fix`. To prevent auto-fixing for warnings, use one of these approaches:
+
+```javascript
+module.exports = {
+  rules: {
+    // Option 1: Explicitly disable auto-fix for warnings
+    "preact-signal-patterns/no-signal-value-outside-hooks": ["warn", { "autoFix": false }],
+  },
+};
+
+// Option 2: Use the "warnings" configuration
+module.exports = {
+  extends: ["plugin:preact-signal-patterns/warnings"], // No auto-fix by default
+};
+```
+
 ---
 
 ### `preact-signal-patterns/no-signal-value-in-jsx`
@@ -149,6 +197,10 @@ const computed = useComputed(() => mySignal.value); // ✓ Allowed in hooks
 
 **Severity**: Warning  
 **Auto-fix**: No (intentionally)
+
+#### Signal Detection:
+
+Like the previous rule, this uses enhanced signal detection and **only flags actual signals**, not arbitrary objects with `.value` properties.
 
 #### What it does:
 
@@ -161,6 +213,11 @@ const computed = useComputed(() => mySignal.value); // ✓ Allowed in hooks
 ⚠️ **Discouraged (will warn):**
 
 ```tsx
+import { signal } from '@preact/signals';
+
+const mySignal = signal("active");
+const otherSignal = signal(true);
+
 <AppButton
   className={clsx(
     styles.button,
@@ -168,6 +225,10 @@ const computed = useComputed(() => mySignal.value); // ✓ Allowed in hooks
     otherSignal.value && styles.disabled // Warning: consider passing signal directly
   )}
 />
+
+// This will NOT be flagged (not a signal):
+const config = { value: "theme-dark" };
+<div className={config.value} /> // ✓ Correctly ignored
 ```
 
 ✅ **Preferred:**
@@ -328,6 +389,16 @@ const MyComponent = () => {
   );
 };
 ```
+
+## 🔧 Code Organization
+
+This plugin uses a shared utility module for consistent signal detection across all rules:
+
+- **`utils/signal-detector.js`**: Shared signal detection logic
+- **`rules/`**: Individual ESLint rules that use the shared detector
+- **`index.js`**: Plugin entry point and configuration presets
+
+This architecture ensures consistent behavior and reduces code duplication.
 
 ## 🤝 Contributing
 
