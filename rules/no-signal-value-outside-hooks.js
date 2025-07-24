@@ -1,3 +1,5 @@
+const { createSignalDetector } = require('../utils/signal-detector');
+
 module.exports = {
   meta: {
     type: 'problem',
@@ -7,15 +9,32 @@ module.exports = {
       recommended: true,
     },
     fixable: 'code',
-    schema: [],
+    schema: [
+      {
+        type: 'object',
+        properties: {
+          autoFix: {
+            type: 'boolean',
+            default: true,
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       noSignalValueOutsideHooks:
         'Reading signal.value outside of useComputed, useSignalEffect, or JSX is not allowed. Use .peek() instead.',
     },
   },
   create(context) {
+    const options = context.options[0] || {};
+    const autoFix = options.autoFix !== false; // Default to true unless explicitly set to false
+    
     let currentFunction = null;
     let jsxDepth = 0;
+
+    // Create signal detector with shared logic
+    const signalDetector = createSignalDetector(context);
 
     function isInAllowedContext() {
       // Allow if we're in JSX
@@ -31,24 +50,9 @@ module.exports = {
       return false;
     }
 
-    function isSignalValueRead(node) {
-      return (
-        node.type === 'MemberExpression' &&
-        node.property.type === 'Identifier' &&
-        node.property.name === 'value' &&
-        !node.computed &&
-        node.object.type === 'Identifier'
-        // Note: We detect any .value access on identifiers
-        // This is more permissive but catches all potential signal usage
-      );
-    }
-
-    function isAssignment(node) {
-      const parent = node.parent;
-      return parent && parent.type === 'AssignmentExpression' && parent.left === node;
-    }
-
     return {
+      // Use shared signal declaration visitor
+      ...signalDetector.getSignalDeclarationVisitor(),
       JSXElement() {
         jsxDepth++;
       },
@@ -78,14 +82,20 @@ module.exports = {
         }
       },
       MemberExpression(node) {
-        if (isSignalValueRead(node) && !isAssignment(node) && !isInAllowedContext()) {
-          context.report({
+        if (signalDetector.isSignalValueRead(node) && !signalDetector.isAssignment(node) && !isInAllowedContext()) {
+          const report = {
             node,
             messageId: 'noSignalValueOutsideHooks',
-            fix(fixer) {
+          };
+          
+          // Only provide fix if auto-fix is enabled
+          if (autoFix) {
+            report.fix = function(fixer) {
               return fixer.replaceText(node.property, 'peek()');
-            },
-          });
+            };
+          }
+          
+          context.report(report);
         }
       },
     };

@@ -1,3 +1,5 @@
+const { createSignalDetector } = require('../utils/signal-detector');
+
 module.exports = {
   meta: {
     type: 'suggestion',
@@ -6,7 +8,7 @@ module.exports = {
       category: 'Best Practices',
       recommended: false,
     },
-    fixable: null, // No auto-fix for JSX usage
+    fixable: null, 
     schema: [],
     messages: {
       noSignalValueInJSX:
@@ -16,24 +18,12 @@ module.exports = {
   create(context) {
     let jsxDepth = 0;
 
-    function isSignalValueRead(node) {
-      return (
-        node.type === 'MemberExpression' &&
-        node.property.type === 'Identifier' &&
-        node.property.name === 'value' &&
-        !node.computed &&
-        node.object.type === 'Identifier'
-        // Note: We detect any .value access on identifiers
-        // This is more permissive but catches all potential signal usage
-      );
-    }
-
-    function isAssignment(node) {
-      const parent = node.parent;
-      return parent && parent.type === 'AssignmentExpression' && parent.left === node;
-    }
+    // Create signal detector with shared logic
+    const signalDetector = createSignalDetector(context);
 
     return {
+      // Use shared signal declaration visitor
+      ...signalDetector.getSignalDeclarationVisitor(),
       JSXElement() {
         jsxDepth++;
       },
@@ -53,7 +43,7 @@ module.exports = {
         jsxDepth--;
       },
       MemberExpression(node) {
-        if (isSignalValueRead(node) && !isAssignment(node) && jsxDepth > 0) {
+        if (signalDetector.isSignalValueRead(node) && !signalDetector.isAssignment(node) && jsxDepth > 0) {
           context.report({
             node,
             messageId: 'noSignalValueInJSX',
