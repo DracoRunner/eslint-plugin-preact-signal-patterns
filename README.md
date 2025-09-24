@@ -408,6 +408,34 @@ This architecture ensures consistent behavior and reduces code duplication.
 4. Push to the branch: `git push origin my-new-feature`
 5. Submit a pull request
 
+
+## Motivation for Signal Usage Rules in Preact
+
+### Why Avoid `.value` in JSX?
+
+Accessing `signal.value` directly in JSX (e.g. `<div>{mySignal.value}</div>`) causes **the entire parent component to re-render every time the signal changes**. This can lead to unnecessary updates and reduced performance, especially as your app grows.
+
+#### Recommended Pattern
+Instead, pass the signal object itself into JSX (e.g. `<div>{mySignal}</div>`).
+Preact will automatically update only the specific DOM node associated with the signal, **without re-rendering the whole parent component**.
+This results in more efficient updates and better performance.
+
+### Why Avoid `.value` Outside Hooks?
+
+Reading signal values outside of hooks or Preact’s reactive utilities can break the reactivity chain, resulting in missed updates or unpredictable rendering.
+Always read signal values inside hooks or reactive contexts to ensure your app responds correctly to changes.
+
+### On Utility Components (`Show`, `For`, etc.)
+
+Preact provides utility components such as [`Show`](https://github.com/preactjs/signals/tree/main/packages/react#show-component) and [`For`](https://github.com/preactjs/signals/tree/main/packages/react#for-component) in separate packages.
+These utilities help you manage conditional rendering or list rendering with signals, and **ensure that only the necessary child components update** (not their parents).
+
+> **Note:**
+> This plugin does not include these utilities directly, but encourages their use for optimal signal reactivity and performance.
+> For advanced rendering patterns, consider using `@preact/signals/utils` or other packages.
+
+---
+
 ## 📄 License
 
 MIT © [Mahendra Baghel](https://github.com/mahendrabaghel)
