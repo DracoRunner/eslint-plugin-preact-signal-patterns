@@ -41,46 +41,56 @@ yarn add -D eslint-plugin-preact-signal-patterns
 
 ## 🚀 Usage
 
+> **⚠️ Version 2.0.0+ requires ESLint 9.0.0 or higher**
+> 
+> For ESLint 8 support, use version 1.x of this plugin.
+
 ### Recommended Configuration
 
-Add to your `.eslintrc.js`:
+Create an `eslint.config.js` file:
 
 ```javascript
-module.exports = {
-  plugins: ["preact-signal-patterns"],
-  extends: ["plugin:preact-signal-patterns/recommended"],
-};
+import preactSignalPatterns from "eslint-plugin-preact-signal-patterns";
+
+export default [
+  preactSignalPatterns.configs.recommended,
+];
 ```
 
 ### Manual Configuration
 
 ```javascript
-module.exports = {
-  plugins: ["preact-signal-patterns"],
-  rules: {
-    "preact-signal-patterns/no-signal-value-outside-hooks": "error", // Error + auto-fix
-    "preact-signal-patterns/no-signal-value-in-jsx": "warn", // Warning only
-    "preact-signal-patterns/no-implicit-boolean-signal": "error", // Prevent bugs
+import preactSignalPatterns from "eslint-plugin-preact-signal-patterns";
+
+export default [
+  {
+    plugins: {
+      "preact-signal-patterns": preactSignalPatterns,
+    },
+    rules: {
+      "preact-signal-patterns/no-signal-value-outside-hooks": "error",
+      "preact-signal-patterns/no-signal-value-in-jsx": "warn",
+      "preact-signal-patterns/no-implicit-boolean-signal": "error",
+    },
   },
-};
+];
 ```
 
 ## 📋 Available Configurations
+
+```javascript
+preactSignalPatterns.configs.recommended        // Default: all rules
+preactSignalPatterns.configs.strict             // Strict mode: all errors
+preactSignalPatterns.configs["jsx-warnings-only"]  // JSX warnings only
+preactSignalPatterns.configs["type-safety"]     // Bug prevention only
+preactSignalPatterns.configs.warnings           // All warnings, no auto-fix
+```
 
 - **`recommended`**: All rules enabled (error for patterns, warn for JSX)
 - **`strict`**: All rules as errors  
 - **`jsx-warnings-only`**: Only warn about JSX usage
 - **`type-safety`**: Only the boolean coercion rule (focuses on bug prevention)
-- **`warn-no-autofix`**: All rules as warnings with auto-fix disabled
-
-```javascript
-// Different config options
-extends: ['plugin:preact-signal-patterns/recommended']  // Default: all rules
-extends: ['plugin:preact-signal-patterns/strict']       // Strict mode: all errors
-extends: ['plugin:preact-signal-patterns/jsx-warnings-only']  // JSX warnings only
-extends: ['plugin:preact-signal-patterns/type-safety']  // Bug prevention only
-extends: ['plugin:preact-signal-patterns/warnings']     // All warnings, no auto-fix by default
-```
+- **`warnings`**: All rules as warnings with auto-fix disabled
 
 ## 📏 Rules
 

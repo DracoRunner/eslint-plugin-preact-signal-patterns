@@ -127,3 +127,4 @@ Desktop.ini
 test-*.js
 test-*.jsx
 .eslintrc.js
+.npmrc

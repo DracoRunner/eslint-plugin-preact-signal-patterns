@@ -1,0 +1,25 @@
+{
+	"name": "eslint-9-demo",
+	"description": "Demo showing eslint-plugin-preact-signal-patterns v2.0.0 with ESLint 9 flat config",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"lint": "eslint src/",
+		"lint:fix": "eslint --fix src/"
+	},
+	"dependencies": {
+		"@preact/signals": "^2.5.1",
+		"preact": "^10.26.9"
+	},
+	"devDependencies": {
+		"@preact/preset-vite": "^2.10.2",
+		"@typescript-eslint/parser": "^8.50.0",
+		"eslint": "^9.39.0",
+		"eslint-plugin-preact-signal-patterns": "file:../..",
+		"typescript": "^5.9.3",
+		"vite": "^7.0.4"
+	}
+}
