@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-preact-signal-patterns",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "ESLint rules for Preact Signals architectural patterns - promotes signal-passing convention and reactive component patterns",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,9 @@
     "preact-signal-patterns",
     "signal-passing",
     "architecture-patterns",
-    "linting"
+    "linting",
+    "eslint9",
+    "flat-config"
   ],
   "author": "Mahendra Baghel",
   "license": "MIT",
@@ -28,10 +30,10 @@
     "url": "https://github.com/DracoRunner/eslint-plugin-preact-signal-patterns/issues"
   },
   "peerDependencies": {
-    "eslint": ">=8.0.0"
+    "eslint": ">=9.0.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "index.js",
@@ -40,6 +42,6 @@
     "README.md"
   ],
   "devDependencies": {
-    "eslint": "^8.0.0"
+    "eslint": "^9.0.0"
   }
 }

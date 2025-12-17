@@ -8,3 +8,4 @@ test.js
 coverage/
 .nyc_output/
 node_modules/
+examples/
