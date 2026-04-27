@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-preact-signal-patterns",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "ESLint rules for Preact Signals architectural patterns - promotes signal-passing convention and reactive component patterns",
   "main": "index.js",
   "scripts": {
